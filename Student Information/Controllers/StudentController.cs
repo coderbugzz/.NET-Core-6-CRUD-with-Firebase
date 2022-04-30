@@ -12,10 +12,8 @@ namespace Student_Information.Controllers
     {
         IFirebaseConfig config = new FirebaseConfig
         {
-            AuthSecret= "Firebase Database Auth",
-            BasePath = "Firebase Database URL"
-
-
+            AuthSecret= "Firebase Database Secret", //database secret
+            BasePath = "Firebase Databse URL" //database url
         };
         IFirebaseClient client;
 
@@ -41,12 +39,25 @@ namespace Student_Information.Controllers
         {
             return View();
         }
+        [HttpPost]
         public IActionResult Create(Student student)
         {
             try
             {
-                AddStudentToFirebase(student);
-                ModelState.AddModelError(string.Empty, "Added Succesfully");
+                client = new FireSharp.FirebaseClient(config);
+                var data = student;
+                PushResponse response = client.Push("Students/", data);
+                data.Id = response.Result.name;
+                SetResponse setResponse = client.Set("Students/" + data.Id, data);
+
+                if(setResponse.StatusCode == System.Net.HttpStatusCode.OK)
+                {
+                    ModelState.AddModelError(string.Empty, "Added Succesfully");
+                }else
+                {
+                    ModelState.AddModelError(string.Empty, "Something went wrong!!");
+                }
+                
 
             }
             catch (Exception ex)
@@ -56,15 +67,6 @@ namespace Student_Information.Controllers
             }
 
             return View();
-        }
-        private void AddStudentToFirebase(Student student)
-        {
-            client = new FireSharp.FirebaseClient(config);
-            var data = student;
-            PushResponse response = client.Push("Students/", data);
-            data.Student_id = response.Result.name;
-            SetResponse setResponse = client.Set("Students/" + data.Student_id, data);
-
         }
         [HttpGet]
         public ActionResult Edit(string id)
@@ -79,7 +81,7 @@ namespace Student_Information.Controllers
         public ActionResult Edit(Student student)
         {
             client = new FireSharp.FirebaseClient(config);
-            SetResponse response = client.Set("Students/" + student.Student_id, student);
+            SetResponse response = client.Set("Students/" + student.Id, student);
             return RedirectToAction("Index");
         }
         public ActionResult Delete(string id)
@@ -88,9 +90,6 @@ namespace Student_Information.Controllers
             FirebaseResponse response = client.Delete("Students/" + id);
             return RedirectToAction("Index");
         }
-
-
-
     }
     }
 
